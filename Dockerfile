@@ -49,9 +49,17 @@ RUN cp "${TARGET}/inviso/trace-mr2/build/libs/inviso#mr2#v0.war" ${TARGET}/apach
 # NOTE: for some reason the -p flag inside a docker build doesn't write out the pidfile :\
 #
 RUN ${TARGET}/elasticsearch-${ELASTICSEARCH_VERSION}/bin/elasticsearch -d ; \
+	sleep 15; \
 	curl -XPUT http://localhost:9200/inviso -d @${TARGET}/inviso/elasticsearch/mappings/config-settings.json ; \
 	curl -XPUT http://localhost:9200/inviso-cluster -d @${TARGET}/inviso/elasticsearch/mappings/cluster-settings.json ; \
+	sleep 15; \
 	kill -9 `ps auxww | grep java | grep -v grep | awk '{print $2}'`
+
+# Add crontab file in the cron directory
+ADD jes.sh jes.sh
+ADD index_cluster_stats.sh index_cluster_stats.sh
+# Give execution rights on the cron job
+RUN chmod 0755 index_cluster_stats.sh jes.sh
 
 ENV SERVICE_CONF /etc/supervisor/conf.d/services.conf
 RUN echo '[program:elasticsearch]' >> ${SERVICE_CONF} ; \
@@ -59,15 +67,18 @@ RUN echo '[program:elasticsearch]' >> ${SERVICE_CONF} ; \
 	echo '' >> ${SERVICE_CONF} ; \
 	echo '[program:tomcat]' >> ${SERVICE_CONF} ; \
 	echo "command=${TARGET}/apache-tomcat-${TOMCAT_VERSION}/bin/catalina.sh run" >> ${SERVICE_CONF} ; \
-	echo "user=hdfs" >> ${SERVICE_CONF} ; \
+	echo 'user=hdfs' >> ${SERVICE_CONF} ; \
+	echo '' >> ${SERVICE_CONF} ; \
+	echo '[program:index_cluster_stats]' >> ${SERVICE_CONF} ; \
+	echo "command=${TARGET}/index_cluster_stats.sh" >> ${SERVICE_CONF} ; \
+	echo '' >> ${SERVICE_CONF} ; \
+	echo '[program:jes]' >> ${SERVICE_CONF} ; \
+	echo "command=${TARGET}/jes.sh" >> ${SERVICE_CONF} ; \
 	echo '' >> ${SERVICE_CONF}
 
 # install jes
 RUN pip install -r inviso/jes/requirements.txt ; \
 	cp inviso/jes/settings_default.py inviso/jes/settings.py
-
-RUN ["/bin/bash", "-c", "while true; do sleep 300s; python inviso/jes/jes.py; done&"]
-RUN ["/bin/bash", "-c", "while true; do sleep 300s; python inviso/jes/index_cluster_stats.py; done&"]
 
 # additional scripting for the boot sequence
 EXPOSE 8080 9200
