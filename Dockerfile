@@ -5,7 +5,8 @@ MAINTAINER Jash Lee <s905060@gmail.com>
 #
 RUN apt-get update && apt-get install -y wget curl vim git python-pip supervisor
 RUN pip install --upgrade pip ; \
-	pip install virtualenv
+	pip install virtualenv ; \
+	useradd -r hdfs
 
 # installation will take place in /opt
 #
@@ -22,7 +23,8 @@ RUN wget -qq https://archive.apache.org/dist/tomcat/tomcat-7/v${TOMCAT_VERSION}/
 	tar -xzvf apache-tomcat-${TOMCAT_VERSION}.tar.gz ; \
 	rm -r apache-tomcat-${TOMCAT_VERSION}/webapps/* ; \
 	rm apache-tomcat-${TOMCAT_VERSION}.tar.gz ; \
-	ln -s apache-tomcat-${TOMCAT_VERSION} /opt/apache-tomcat 
+	ln -s apache-tomcat-${TOMCAT_VERSION} /opt/apache-tomcat ; \
+	chown -R hdfs /opt/apache-tomcat/
 
 # install elastic search
 #
@@ -33,7 +35,7 @@ RUN wget -qq http://download.elasticsearch.org/elasticsearch/elasticsearch/elast
 
 # INVISO_COMMIT_HASH allows us to specify the exact version of inviso this container will build
 #
-ENV INVISO_COMMIT_HASH 30b445c4221ecdcf432f4009e176f80a7c922dbd
+ENV INVISO_COMMIT_HASH master
 
 # clone the inviso repo and build the project
 #
@@ -57,6 +59,7 @@ RUN echo '[program:elasticsearch]' >> ${SERVICE_CONF} ; \
 	echo '' >> ${SERVICE_CONF} ; \
 	echo '[program:tomcat]' >> ${SERVICE_CONF} ; \
 	echo "command=${TARGET}/apache-tomcat-${TOMCAT_VERSION}/bin/catalina.sh run" >> ${SERVICE_CONF} ; \
+	echo "user=hdfs" >> ${SERVICE_CONF} ; \
 	echo '' >> ${SERVICE_CONF}
 
 # install jes

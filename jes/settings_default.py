@@ -53,11 +53,11 @@ def genie_clusters():
 def inviso_trace(job_id, uri, version='mr1', summary=True):
     path = '/inviso/%s/v0/trace/load/%s?%s&summary=%s' % (version, job_id, urlencode({'path': uri}), summary)
     headers = {'content-type': 'application/json', 'Accept': 'application/json'}
-    response = requests.request('GET', 'http://' +inviso_host + path, headers=headers)
-    
+    response = requests.request('GET', 'http://' + inviso_host + path, headers=headers)
+
     if not response:
         return None
-    
+
     return response.json()
 
 inviso_host = 'localhost:8080'
